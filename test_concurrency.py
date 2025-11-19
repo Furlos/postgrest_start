@@ -21,7 +21,7 @@ async def test_100_concurrent_creations():
         return success
 
     # Уменьшаем количество для теста (100 для начала)
-    tasks = [create_one(i) for i in range(100)]
+    tasks = [create_one(i) for i in range(10000)]
     results = await asyncio.gather(*tasks)
 
     successful_creations = sum(results)
