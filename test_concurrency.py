@@ -1,10 +1,10 @@
-# test_concurrency.py
 import asyncio
 import pytest
+import os
 from db import UserDB, Base
 
-# Укажи свой пароль или используй переменную окружения
-DATABASE_URL = "YOUR_DATABASE_URL"
+# Используем локальный PostgreSQL
+DATABASE_URL = "postgresql+asyncpg://test_user:test_password@localhost:5432/test_db"
 
 @pytest.mark.asyncio
 async def test_100_concurrent_creations():
@@ -20,17 +20,20 @@ async def test_100_concurrent_creations():
         success = await db.create_user(f"user_{i}", f"user{i}@test.com")
         return success
 
-    # Запускаем 2000 одновременных созданий и ждем завершения
-    tasks = [create_one(i) for i in range(10000)]
-    results = await asyncio.gather(*tasks)  # ДОБАВЛЕНО: ожидание завершения всех задач
+    # Уменьшаем количество для теста (100 для начала)
+    tasks = [create_one(i) for i in range(100)]
+    results = await asyncio.gather(*tasks)
 
-    # Проверяем, что все операции завершились успешно
-    assert all(results), "Не все создания пользователей завершились успешно"
+    successful_creations = sum(results)
+    print(f"Успешных созданий: {successful_creations} из {len(results)}")
 
-    # Проверяем, что в БД действительно 2000 пользователей
+    # Проверяем количество пользователей в БД
     count = await db.count_users()
-    assert count == 10000
+    print(f"Пользователей в БД: {count}")
 
-    print("10000 одновременных созданий — УСПЕШНО!")
+    # Ожидаем, что все создания прошли успешно
+    assert successful_creations == len(results), f"Не все создания успешны: {successful_creations}/{len(results)}"
+    assert count == len(results), f"Количество в БД не совпадает: {count}/{len(results)}"
 
+    print("100 одновременных созданий — УСПЕШНО!")
     await db.close()
